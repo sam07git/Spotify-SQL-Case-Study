@@ -1,96 +1,114 @@
+-- =====================================================
+-- 🎧 Spotify User Behavior Analysis (SQL Case Study)
+-- =====================================================
+
+-- 1. Create and Select Database
 CREATE DATABASE spotify_analysis;
 USE spotify_analysis;
-SELECT * FROM spotify_user_behavior_realistic_50000_rows LIMIT 5;
 
-select count(*) from spotify_user_behavior_realistic_50000_rows
+-- 2. Preview Dataset
+SELECT * 
+FROM spotify_user_behavior_realistic_50000_rows 
+LIMIT 5;
 
-DESCRIBE spotify_user_behavior_realistic_50000_rows
+-- 3. Total Number of Records
+SELECT COUNT(*) 
+FROM spotify_user_behavior_realistic_50000_rows;
 
-Select Count(distinct country) from spotify_user_behavior_realistic_50000_rows
+-- 4. View Table Structure
+DESCRIBE spotify_user_behavior_realistic_50000_rows;
 
-"What are different subscription types?"
+-- 5. Number of Unique Countries
+SELECT COUNT(DISTINCT country) 
+FROM spotify_user_behavior_realistic_50000_rows;
+
+-- =====================================================
+-- 📊 Subscription Analysis
+-- =====================================================
+
+-- 6. Distribution of Subscription Types
 SELECT subscription_type, COUNT(*) AS users
 FROM spotify_user_behavior_realistic_50000_rows
-GROUP BY subscription_type
+GROUP BY subscription_type;
 
-
-" Which subscription type listens more? "
+-- 7. Which Subscription Type Listens the Most
 SELECT subscription_type, 
-AVG(avg_listening_hours_per_week) AS avg_hours
+       AVG(avg_listening_hours_per_week) AS avg_hours
 FROM spotify_user_behavior_realistic_50000_rows
 GROUP BY subscription_type
-order by avg_hours desc
-limit 1
+ORDER BY avg_hours DESC
+LIMIT 1;
 
+-- 8. Total Users by Subscription Type
 SELECT subscription_type, COUNT(*) AS total_users
 FROM spotify_user_behavior_realistic_50000_rows
 GROUP BY subscription_type
 ORDER BY total_users DESC;
 
-Select AVG(avg_skips_per_day) as avgg, subscription_type
-from spotify_user_behavior_realistic_50000_rows
-where subscription_type in("free","premium individual")
+-- 9. Avg Skips for Free vs Premium Individual Users
+SELECT subscription_type,
+       AVG(avg_skips_per_day) AS avg_skips
+FROM spotify_user_behavior_realistic_50000_rows
+WHERE subscription_type IN ('Free', 'Premium Individual')
 GROUP BY subscription_type
-order by avgg desc
+ORDER BY avg_skips DESC;
 
-"Write query for:Avg skips per day by subscription type"
-Select 
-case
-WHEN subscription_type = 'Free' THEN 'Free'
-        ELSE 'Premium'
-end as subscritionType,
-AVG(avg_skips_per_day) as avgg
-from spotify_user_behavior_realistic_50000_rows
-GROUP BY subscritionType;
-
-"Free users skip more songs compared to Premium users, indicating lower engagement quality despite higher listening hours."
+-- 10. Avg Skips by User Type (Free vs All Premium)
 SELECT 
     CASE 
         WHEN subscription_type = 'Free' THEN 'Free'
         ELSE 'Premium'
-    END AS user_type,
+    END AS subscription_type_group,
     AVG(avg_skips_per_day) AS avg_skips
 FROM spotify_user_behavior_realistic_50000_rows
-GROUP BY user_type;
+GROUP BY subscription_type_group;
 
+-- =====================================================
+-- 📉 Inactivity Analysis
+-- =====================================================
 
-
-"Do skips affect inactivity?"
-
+-- 11. Do Skips Affect Inactivity?
 SELECT inactive_3_months_flag,
        AVG(avg_skips_per_day) AS avg_skips
 FROM spotify_user_behavior_realistic_50000_rows
 GROUP BY inactive_3_months_flag;
 
-"Skipping behavior is almost the same for active and inactive users, so it is not a strong factor influencing inactivity"
-
+-- 12. Listening Hours vs Inactivity
 SELECT inactive_3_months_flag,
        AVG(avg_listening_hours_per_week) AS avg_hours
 FROM spotify_user_behavior_realistic_50000_rows
 GROUP BY inactive_3_months_flag;
 
+-- 13. Playlists Created vs Inactivity
 SELECT inactive_3_months_flag,
        AVG(playlists_created) AS avg_playlists
 FROM spotify_user_behavior_realistic_50000_rows
 GROUP BY inactive_3_months_flag;
 
+-- 14. Ad Interaction vs Inactivity
 SELECT inactive_3_months_flag,
        AVG(ad_interaction = 'Yes') AS ad_interaction_rate
 FROM spotify_user_behavior_realistic_50000_rows
 GROUP BY inactive_3_months_flag;
 
+-- 15. Rating vs Inactivity
 SELECT inactive_3_months_flag,
        AVG(music_suggestion_rating_1_to_5) AS avg_rating
 FROM spotify_user_behavior_realistic_50000_rows
 GROUP BY inactive_3_months_flag;
 
- "Age vs engagement Part 1"
-Select age, avg(avg_listening_hours_per_week) as result
+-- =====================================================
+-- 👥 Age-Based Analysis
+-- =====================================================
+
+-- 16. Age vs Engagement (Individual Ages)
+SELECT age, 
+       AVG(avg_listening_hours_per_week) AS avg_hours
 FROM spotify_user_behavior_realistic_50000_rows
 GROUP BY age
-order by result desc;
+ORDER BY avg_hours DESC;
 
- "Age vs engagement Part 2"
+-- 17. Age Group vs Engagement
 SELECT 
     CASE 
         WHEN age BETWEEN 18 AND 25 THEN '18-25'
@@ -102,10 +120,13 @@ SELECT
     AVG(avg_listening_hours_per_week) AS avg_hours
 FROM spotify_user_behavior_realistic_50000_rows
 GROUP BY age_group
-order by avg_hours desc
+ORDER BY avg_hours DESC;
 
-"Age vs Subscription"
+-- =====================================================
+-- 👤 Age vs Subscription Analysis
+-- =====================================================
 
+-- 18. Subscription Distribution by Age Group
 SELECT 
     CASE 
         WHEN age BETWEEN 18 AND 25 THEN '18-25'
@@ -119,6 +140,7 @@ FROM spotify_user_behavior_realistic_50000_rows
 GROUP BY age_group, subscription_type
 ORDER BY age_group, users DESC;
 
+-- 19. Top Subscription Type per Age Group (Using RANK)
 SELECT *
 FROM (
     SELECT 
@@ -130,21 +152,26 @@ FROM (
         END AS age_group,
         subscription_type,
         COUNT(*) AS users,
-        RANK() OVER (PARTITION BY 
-            CASE 
-                WHEN age BETWEEN 18 AND 25 THEN '18-25'
-                WHEN age BETWEEN 26 AND 35 THEN '26-35'
-                WHEN age BETWEEN 36 AND 50 THEN '36-50'
-                ELSE '50+'
-            END
-        ORDER BY COUNT(*) DESC) AS rnk
+        RANK() OVER (
+            PARTITION BY 
+                CASE 
+                    WHEN age BETWEEN 18 AND 25 THEN '18-25'
+                    WHEN age BETWEEN 26 AND 35 THEN '26-35'
+                    WHEN age BETWEEN 36 AND 50 THEN '36-50'
+                    ELSE '50+'
+                END
+            ORDER BY COUNT(*) DESC
+        ) AS rnk
     FROM spotify_user_behavior_realistic_50000_rows
     GROUP BY age_group, subscription_type
 ) t
 WHERE rnk = 1;
 
-"Top genres by listening
-Genre vs skips"
+-- =====================================================
+-- 🎵 Genre Analysis
+-- =====================================================
+
+-- 20. Top Genres by Listening Hours and Skipping Behavior
 SELECT favorite_genre,
        AVG(avg_listening_hours_per_week) AS avg_hours,
        AVG(avg_skips_per_day) AS avg_skips
